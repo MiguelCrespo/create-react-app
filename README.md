@@ -1,224 +1,328 @@
-# Create React App [![Build Status](https://travis-ci.org/facebookincubator/create-react-app.svg?branch=master)](https://travis-ci.org/facebookincubator/create-react-app)
+# react-dev-utils
 
-Create React apps with no build configuration.
+This package includes some utilities used by [Create React App](https://github.com/facebookincubator/create-react-app).<br>
+Please refer to its documentation:
 
-* [Creating an App](#creating-an-app) – How to create a new app.
+* [Getting Started](https://github.com/facebookincubator/create-react-app/blob/master/README.md#getting-started) – How to create a new app.
 * [User Guide](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md) – How to develop apps bootstrapped with Create React App.
 
-Create React App works on macOS, Windows, and Linux.<br>
-If something doesn’t work, please [file an issue](https://github.com/facebookincubator/create-react-app/issues/new).
+## Usage in Create React App Projects
 
-## Quick Overview
+These utilities come by default with [Create React App](https://github.com/facebookincubator/create-react-app), which includes it by default. **You don’t need to install it separately in Create React App projects.**
 
-```sh
-npx create-react-app my-app
-cd my-app
-npm start
+## Usage Outside of Create React App
+
+If you don’t use Create React App, or if you [ejected](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#npm-run-eject), you may keep using these utilities. Their development will be aligned with Create React App, so major versions of these utilities may come out relatively often. Feel free to fork or copy and paste them into your projects if you’d like to have more control over them, or feel free to use the old versions. Not all of them are React-specific, but we might make some of them more React-specific in the future.
+
+### Entry Points
+
+There is no single entry point. You can only import individual top-level modules.
+
+#### `new InterpolateHtmlPlugin(replacements: {[key:string]: string})`
+
+This Webpack plugin lets us interpolate custom variables into `index.html`.<br>
+It works in tandem with [HtmlWebpackPlugin](https://github.com/ampedandwired/html-webpack-plugin) 2.x via its [events](https://github.com/ampedandwired/html-webpack-plugin#events).
+
+```js
+var path = require('path');
+var HtmlWebpackPlugin = require('html-dev-plugin');
+var InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
+
+// Webpack config
+var publicUrl = '/my-custom-url';
+
+module.exports = {
+  output: {
+    // ...
+    publicPath: publicUrl + '/'
+  },
+  // ...
+  plugins: [
+    // Makes the public URL available as %PUBLIC_URL% in index.html, e.g.:
+    // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
+    new InterpolateHtmlPlugin({
+      PUBLIC_URL: publicUrl
+      // You can pass any key-value pairs, this was just an example.
+      // WHATEVER: 42 will replace %WHATEVER% with 42 in index.html.
+    }),
+    // Generates an `index.html` file with the <script> injected.
+    new HtmlWebpackPlugin({
+      inject: true,
+      template: path.resolve('public/index.html'),
+    }),
+    // ...
+  ],
+  // ...
+}
 ```
 
-*([npx](https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b) comes with npm 5.2+ and higher, see [instructions for older npm versions](https://gist.github.com/gaearon/4064d3c23a77c74a3614c498a8bb1c5f))*
 
-Then open [http://localhost:3000/](http://localhost:3000/) to see your app.<br>
-When you’re ready to deploy to production, create a minified bundle with `npm run build`.
+#### `new ModuleScopePlugin(appSrc: string, allowedFiles?: string[])`
 
-<p align='center'>
-<img src='https://cdn.rawgit.com/facebookincubator/create-react-app/6ab67e6b96457720d843aa3c557ff951a41bafc2/screencast.svg' width='600' alt=''>
-</p>
+This Webpack plugin ensures that relative imports from app's source directory don't reach outside of it.
 
-### Get Started Immediately
+```js
+var path = require('path');
+var ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 
-You **don’t** need to install or configure tools like Webpack or Babel.<br>
-They are preconfigured and hidden so that you can focus on the code.
 
-Just create a project, and you’re good to go.
-
-## Creating an App
-
-**You’ll need to have Node >= 6 on your local development machine** (but it’s not required on the server). You can use [nvm](https://github.com/creationix/nvm#installation) (macOS/Linux) or [nvm-windows](https://github.com/coreybutler/nvm-windows#node-version-manager-nvm-for-windows) to easily switch Node versions between different projects.
-
-To create a new app, run a single command:
-
-```sh
-npx create-react-app my-app
+module.exports = {
+  // ...
+  resolve: {
+    // ...
+    plugins: [
+      new ModuleScopePlugin(paths.appSrc, [paths.appPackageJson]),
+      // ...
+    ],
+    // ...
+  },
+  // ...
+}
 ```
 
-*([npx](https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b) comes with npm 5.2+ and higher, see [instructions for older npm versions](https://gist.github.com/gaearon/4064d3c23a77c74a3614c498a8bb1c5f))*
+#### `new WatchMissingNodeModulesPlugin(nodeModulesPath: string)`
 
-It will create a directory called `my-app` inside the current folder.<br>
-Inside that directory, it will generate the initial project structure and install the transitive dependencies:
+This Webpack plugin ensures `npm install <library>` forces a project rebuild.<br>
+We’re not sure why this isn't Webpack's default behavior.<br>
+See [#186](https://github.com/facebookincubator/create-react-app/issues/186) for details.
 
-```
-my-app
-├── README.md
-├── node_modules
-├── package.json
-├── .gitignore
-├── public
-│   └── favicon.ico
-│   └── index.html
-│   └── manifest.json
-└── src
-    └── App.css
-    └── App.js
-    └── App.test.js
-    └── index.css
-    └── index.js
-    └── logo.svg
-    └── registerServiceWorker.js
-```
+```js
+var path = require('path');
+var WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
 
-No configuration or complicated folder structures, just the files you need to build your app.<br>
-Once the installation is done, you can open your project folder:
-
-```sh
-cd my-app
+// Webpack config
+module.exports = {
+  // ...
+  plugins: [
+    // ...
+    // If you require a missing module and then `npm install` it, you still have
+    // to restart the development server for Webpack to discover it. This plugin
+    // makes the discovery automatic so you don't have to restart.
+    // See https://github.com/facebookincubator/create-react-app/issues/186
+    new WatchMissingNodeModulesPlugin(path.resolve('node_modules'))
+  ],
+  // ...
+}
 ```
 
-Inside the newly created project, you can run some built-in commands:
+#### `checkRequiredFiles(files: Array<string>): boolean`
 
-### `npm start` or `yarn start`
+Makes sure that all passed files exist.<br>
+Filenames are expected to be absolute.<br>
+If a file is not found, prints a warning message and returns `false`.
 
-Runs the app in development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```js
+var path = require('path');
+var checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
 
-The page will automatically reload if you make changes to the code.<br>
-You will see the build errors and lint warnings in the console.
+if (!checkRequiredFiles([
+  path.resolve('public/index.html'),
+  path.resolve('src/index.js')
+])) {
+  process.exit(1);
+}
+```
 
-<img src='https://camo.githubusercontent.com/41678b3254cf583d3186c365528553c7ada53c6e/687474703a2f2f692e696d6775722e636f6d2f466e4c566677362e706e67' width='600' alt='Build errors'>
+#### `clearConsole(): void`
 
-### `npm test` or `yarn test`
+Clears the console, hopefully in a cross-platform way.
 
-Runs the test watcher in an interactive mode.<br>
-By default, runs tests related to files changed since the last commit.
+```js
+var clearConsole = require('react-dev-utils/clearConsole');
 
-[Read more about testing.](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#running-tests)
+clearConsole();
+console.log('Just cleared the screen!');
+```
 
-### `npm run build` or `yarn build`
+#### `eslintFormatter(results: Object): string`
 
-Builds the app for production to the `build` folder.<br>
-It correctly bundles React in production mode and optimizes the build for the best performance.
+This is our custom ESLint formatter that integrates well with Create React App console output.<br>
+You can use the default one instead if you prefer so.
 
-The build is minified and the filenames include the hashes.<br>
-By default, it also [includes a service worker](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#making-a-progressive-web-app) so that your app loads from local cache on future visits.
+```js
+const eslintFormatter = require('react-dev-utils/eslintFormatter');
 
-Your app is ready to be deployed.
+// In your webpack config:
+// ...
+module: {
+   rules: [
+     {
+        test: /\.(js|jsx)$/,
+        include: paths.appSrc,
+        enforce: 'pre',
+        use: [
+          {
+            loader: 'eslint-loader',
+            options: {
+              // Pass the formatter:
+              formatter: eslintFormatter,
+            },
+          },
+        ],
+      }
+   ]
+}
+```
 
-## User Guide
+#### `FileSizeReporter`
 
-The [User Guide](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md) includes information on different topics, such as:
+##### `measureFileSizesBeforeBuild(buildFolder: string): Promise<OpaqueFileSizes>`
 
-- [Updating to New Releases](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#updating-to-new-releases)
-- [Folder Structure](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#folder-structure)
-- [Available Scripts](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#available-scripts)
-- [Supported Browsers](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#supported-browsers)
-- [Supported Language Features and Polyfills](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#supported-language-features-and-polyfills)
-- [Syntax Highlighting in the Editor](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#syntax-highlighting-in-the-editor)
-- [Displaying Lint Output in the Editor](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#displaying-lint-output-in-the-editor)
-- [Formatting Code Automatically](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#formatting-code-automatically)
-- [Debugging in the Editor](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#debugging-in-the-editor)
-- [Changing the Page `<title>`](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#changing-the-page-title)
-- [Installing a Dependency](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#installing-a-dependency)
-- [Importing a Component](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#importing-a-component)
-- [Code Splitting](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#code-splitting)
-- [Adding a Stylesheet](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-a-stylesheet)
-- [Post-Processing CSS](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#post-processing-css)
-- [Adding a CSS Preprocessor (Sass, Less etc.)](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-a-css-preprocessor-sass-less-etc)
-- [Adding Images, Fonts, and Files](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-images-fonts-and-files)
-- [Using the `public` Folder](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#using-the-public-folder)
-- [Using Global Variables](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#using-global-variables)
-- [Adding Bootstrap](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-bootstrap)
-- [Adding Flow](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-flow)
-- [Adding a Router](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-a-router)
-- [Adding Custom Environment Variables](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#adding-custom-environment-variables)
-- [Can I Use Decorators?](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#can-i-use-decorators)
-- [Fetching Data with AJAX Requests](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#fetching-data-with-ajax-requests)
-- [Integrating with an API Backend](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#integrating-with-an-api-backend)
-- [Proxying API Requests in Development](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#proxying-api-requests-in-development)
-- [Using HTTPS in Development](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#using-https-in-development)
-- [Generating Dynamic `<meta>` Tags on the Server](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#generating-dynamic-meta-tags-on-the-server)
-- [Pre-Rendering into Static HTML Files](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#pre-rendering-into-static-html-files)
-- [Running Tests](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#running-tests)
-- [Debugging Tests](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#debugging-tests)
-- [Developing Components in Isolation](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#developing-components-in-isolation)
-- [Publishing Components to npm](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#publishing-components-to-npm)
-- [Making a Progressive Web App](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#making-a-progressive-web-app)
-- [Analyzing the Bundle Size](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#analyzing-the-bundle-size)
-- [Deployment](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#deployment)
-- [Advanced Configuration](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#advanced-configuration)
-- [Troubleshooting](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#troubleshooting)
+Captures JS and CSS asset sizes inside the passed `buildFolder`. Save the result value to compare it after the build.
 
-A copy of the user guide will be created as `README.md` in your project folder.
+##### `printFileSizesAfterBuild(webpackStats: WebpackStats, previousFileSizes: OpaqueFileSizes, buildFolder: string, maxBundleGzipSize?: number, maxChunkGzipSize?: number)`
 
-## How to Update to New Versions?
+Prints the JS and CSS asset sizes after the build, and includes a size comparison with `previousFileSizes` that were captured earlier using `measureFileSizesBeforeBuild()`. `maxBundleGzipSize` and `maxChunkGzipSizemay` may optionally be specified to display a warning when the main bundle or a chunk exceeds the specified size (in bytes).
 
-Please refer to the [User Guide](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#updating-to-new-releases) for this and other information.
+```js
+var {
+  measureFileSizesBeforeBuild,
+  printFileSizesAfterBuild,
+} = require('react-dev-utils/FileSizeReporter');
 
-## Philosophy
+measureFileSizesBeforeBuild(buildFolder).then(previousFileSizes => {
+  return cleanAndRebuild().then(webpackStats => {
+    printFileSizesAfterBuild(webpackStats, previousFileSizes, buildFolder);
+  });
+});
+```
 
-* **One Dependency:** There is just one build dependency. It uses Webpack, Babel, ESLint, and other amazing projects, but provides a cohesive curated experience on top of them.
+#### `formatWebpackMessages({errors: Array<string>, warnings: Array<string>}): {errors: Array<string>, warnings: Array<string>}`
 
-* **No Configuration Required:** You don't need to configure anything. Reasonably good configuration of both development and production builds is handled for you so you can focus on writing code.
+Extracts and prettifies warning and error messages from webpack [stats](https://github.com/webpack/docs/wiki/node.js-api#stats) object.
 
-* **No Lock-In:** You can “eject” to a custom setup at any time. Run a single command, and all the configuration and build dependencies will be moved directly into your project, so you can pick up right where you left off.
+```js
+var webpack = require('webpack');
+var config = require('../config/webpack.config.dev');
+var formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
 
-## What’s Included?
+var compiler = webpack(config);
 
-Your environment will have everything you need to build a modern single-page React app:
+compiler.plugin('invalid', function() {
+  console.log('Compiling...');
+});
 
-* React, JSX, ES6, and Flow syntax support.
-* Language extras beyond ES6 like the object spread operator.
-* Autoprefixed CSS, so you don’t need `-webkit` or other prefixes.
-* A fast interactive unit test runner with built-in support for coverage reporting.
-* A live development server that warns about common mistakes.
-* A build script to bundle JS, CSS, and images for production, with hashes and sourcemaps.
-* An offline-first [service worker](https://developers.google.com/web/fundamentals/getting-started/primers/service-workers) and a [web app manifest](https://developers.google.com/web/fundamentals/engage-and-retain/web-app-manifest/), meeting all the [Progressive Web App](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#making-a-progressive-web-app) criteria.
-* Hassle-free updates for the above tools with a single dependency.
+compiler.plugin('done', function(stats) {
+  var rawMessages = stats.toJson({}, true);
+  var messages = formatWebpackMessages(rawMessages);
+  if (!messages.errors.length && !messages.warnings.length) {
+    console.log('Compiled successfully!');
+  }
+  if (messages.errors.length) {
+    console.log('Failed to compile.');
+    messages.errors.forEach(e => console.log(e));
+    return;
+  }
+  if (messages.warnings.length) {
+    console.log('Compiled with warnings.');
+    messages.warnings.forEach(w => console.log(w));
+  }
+});
+```
 
-Check out [this guide](https://github.com/nitishdayal/cra_closer_look) for an overview of how these tools fit together.
+#### `printBuildError(error: Object): void`
 
-The tradeoff is that **these tools are preconfigured to work in a specific way**. If your project needs more customization, you can ["eject"](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#npm-run-eject) and customize it, but then you will need to maintain this configuration.
+Prettify some known build errors.
+Pass an Error object to log a prettified error message in the console.
 
-## Popular Alternatives
+```
+  const printBuildError = require('react-dev-utils/printBuildError')
+  try {
+    build()
+  } catch(e) {
+    printBuildError(e) // logs prettified message
+  }
+```
 
-Create React App is a great fit for:
+#### `getProcessForPort(port: number): string`
 
-* **Learning React** in a comfortable and feature-rich development environment.
-* **Starting new single-page React applications.**
-* **Creating examples** with React for your libraries and components.
+Finds the currently running process on `port`.
+Returns a string containing the name and directory, e.g.,
 
-Here’s a few common cases where you might want to try something else:
+```
+create-react-app
+in /Users/developer/create-react-app
+```
 
-* If you want to **try React** without hundreds of transitive build tool dependencies, consider [using a single HTML file or an online sandbox instead](https://reactjs.org/docs/try-react.html).
+```js
+var getProcessForPort = require('react-dev-utils/getProcessForPort');
 
-* If you need to **integrate React code with a server-side template framework** like Rails or Django, or if you’re **not building a single-page app**, consider using [nwb](https://github.com/insin/nwb) or [Neutrino](https://neutrino.js.org/) which are more flexible.
+getProcessForPort(3000);
+```
 
-* If you need to **publish a React component**, [nwb](https://github.com/insin/nwb) can [also do this](https://github.com/insin/nwb#react-components-and-libraries), as well as [Neutrino's react-components preset](https://neutrino.js.org/packages/react-components/).
+#### `launchEditor(fileName: string, lineNumber: number): void`
 
-* If you want to do **server rendering** with React and Node.js, check out [Next.js](https://github.com/zeit/next.js/) or [Razzle](https://github.com/jaredpalmer/razzle). Create React App is agnostic of the backend, and just produces static HTML/JS/CSS bundles.
+On macOS, tries to find a known running editor process and opens the file in it. It can also be explicitly configured by `REACT_EDITOR`, `VISUAL`, or `EDITOR` environment variables. For example, you can put `REACT_EDITOR=atom` in your `.env.local` file, and Create React App will respect that.
 
-* If your website is **mostly static** (for example, a portfolio or a blog), consider using [Gatsby](https://www.gatsbyjs.org/) instead. Unlike Create React App, it pre-renders the website into HTML at the build time.
+#### `noopServiceWorkerMiddleware(): ExpressMiddleware`
 
-* If you want to use **TypeScript**, consider using [create-react-app-typescript](https://github.com/wmonk/create-react-app-typescript).
+Returns Express middleware that serves a `/service-worker.js` that resets any previously set service worker configuration. Useful for development.
 
-* Finally, if you need **more customization**, check out [Neutrino](https://neutrino.js.org/) and its [React preset](https://neutrino.js.org/packages/react/).
+#### `openBrowser(url: string): boolean`
 
-All of the above tools can work with little to no configuration.
+Attempts to open the browser with a given URL.<br>
+On Mac OS X, attempts to reuse an existing Chrome tab via AppleScript.<br>
+Otherwise, falls back to [opn](https://github.com/sindresorhus/opn) behavior.
 
-If you prefer configuring the build yourself, [follow this guide](https://reactjs.org/docs/add-react-to-an-existing-app.html).
 
-## Contributing
+```js
+var path = require('path');
+var openBrowser = require('react-dev-utils/openBrowser');
 
-We'd love to have your helping hand on `create-react-app`! See [CONTRIBUTING.md](CONTRIBUTING.md) for more information on what we're looking for and how to get started.
+if (openBrowser('http://localhost:3000')) {
+  console.log('The browser tab has been opened!');
+}
+```
 
-## React Native
+#### `printHostingInstructions(appPackage: Object, publicUrl: string, publicPath: string, buildFolder: string, useYarn: boolean): void`
 
-Looking for something similar, but for React Native?<br>
-Check out [Create React Native App](https://github.com/react-community/create-react-native-app/).
+Prints hosting instructions after the project is built.
 
-## Acknowledgements
+Pass your parsed `package.json` object as `appPackage`, your the URL where you plan to host the app as `publicUrl`, `output.publicPath` from your Webpack configuration as `publicPath`, the `buildFolder` name, and whether to `useYarn` in instructions.
 
-We are grateful to the authors of existing related projects for their ideas and collaboration:
+```js
+const appPackage = require(paths.appPackageJson);
+const publicUrl = paths.publicUrl;
+const publicPath = config.output.publicPath;
+printHostingInstructions(appPackage, publicUrl, publicPath, 'build', true);
+```
 
-* [@eanplatter](https://github.com/eanplatter)
-* [@insin](https://github.com/insin)
-* [@mxstbr](https://github.com/mxstbr)
+#### `WebpackDevServerUtils`
+
+##### `choosePort(host: string, defaultPort: number): Promise<number | null>`
+
+Returns a Promise resolving to either `defaultPort` or next available port if the user confirms it is okay to do. If the port is taken and the user has refused to use another port, or if the terminal is not interactive and can’t present user with the choice, resolves to `null`.
+
+##### `createCompiler(webpack: Function, config: Object, appName: string, urls: Object, useYarn: boolean): WebpackCompiler`
+
+Creates a Webpack compiler instance for WebpackDevServer with built-in helpful messages. Takes the `require('webpack')` entry point as the first argument. To provide the `urls` argument, use `prepareUrls()` described below.
+
+##### `prepareProxy(proxySetting: string, appPublicFolder: string): Object`
+
+Creates a WebpackDevServer `proxy` configuration object from the `proxy` setting in `package.json`.
+
+##### `prepareUrls(protocol: string, host: string, port: number): Object`
+
+Returns an object with local and remote URLs for the development server. Pass this object to `createCompiler()` described above.
+
+#### `webpackHotDevClient`
+
+This is an alternative client for [WebpackDevServer](https://github.com/webpack/webpack-dev-server) that shows a syntax error overlay.
+
+It currently supports only Webpack 3.x.
+
+```js
+// Webpack development config
+module.exports = {
+  // ...
+  entry: [
+    // You can replace the line below with these two lines if you prefer the
+    // stock client:
+    // require.resolve('webpack-dev-server/client') + '?/',
+    // require.resolve('webpack/hot/dev-server'),
+    'react-dev-utils/webpackHotDevClient',
+    'src/index'
+  ],
+  // ...
+}
+```
